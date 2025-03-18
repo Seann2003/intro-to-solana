@@ -20,9 +20,45 @@ export default function Page() {
   const network = "https://api.devnet.solana.com";
 
   // Fetch the balance
-
+  useEffect(() => {
+    const connection = new Connection(network);
+    const fetchBalance = async () => {
+      if (publicKey) {
+        const balance = await connection.getBalance(publicKey);
+        setBalance(balance / LAMPORTS_PER_SOL);
+      }
+    };
+    fetchBalance();
+  }, [publicKey]);
   // Handle the transaction
-  const handleSendTransaction = async () => {};
+  const handleSendTransaction = async () => {
+    if (!recipient || !amount) {
+      setError("Hey, recipient or amount is actually empty!");
+    }
+
+    try {
+      const connection = new Connection(network);
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          /** Account that will receive transferred lamports */
+          toPubkey: new PublicKey(recipient),
+          /** Amount of lamports to transfer */
+          lamports: amount * LAMPORTS_PER_SOL,
+        })
+      );
+
+      const signature = await sendTransaction(transaction, connection);
+      await connection.confirmTransaction(signature);
+
+      setBalance(balance - amount);
+      setAmount(0);
+      setRecipient("");
+      setError("");
+    } catch (err) {
+      setError(`There's error during transaction: ${err.message}`);
+    }
+  };
 
   return (
     <div className="font-sans p-5 text-black">
